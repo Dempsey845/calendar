@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default function Calendar({ setSelectedDate }) {
+export default function Calendar({ setSelectedDate, monthData }) {
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const [date, setDate] = useState(new Date());
   const [monthInfo, setMonthInfo] = useState({
@@ -66,33 +66,49 @@ export default function Calendar({ setSelectedDate }) {
           ></div>
         ))}
 
-        {Array.from({ length: monthInfo.daysInMonth }).map((_, i) => (
-          <div
-            key={i}
-            onClick={() => {
-              const newDate = new Date(
-                monthInfo.year,
-                monthInfo.month,
-                i + 1,
-                0,
-                0
-              );
-              setSelectedDate(newDate);
-              console.log(newDate);
-            }}
-            className={`aspect-square flex items-center justify-center rounded-lg border border-gray-200 ${
-              monthInfo.month == currentMonth && i == currentDay - 1
-                ? "bg-gray-300"
-                : "bg-white"
-            } shadow-sm ${
-              monthInfo.month == currentMonth && i == currentDay - 1
-                ? "hover:bg-gray-400"
-                : "hover:bg-gray-100"
-            }`}
-          >
-            {i + 1}
-          </div>
-        ))}
+        {Array.from({ length: monthInfo.daysInMonth }).map((_, i) => {
+          const dayNum = i + 1;
+          const dayString = `${monthInfo.year}-${String(
+            monthInfo.month + 1
+          ).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+
+          // Find events for this day from monthData
+          const dayEvents =
+            monthData.find((d) => d.date === dayString)?.events || [];
+
+          return (
+            <div
+              key={i}
+              onClick={() => {
+                const newDate = new Date(
+                  monthInfo.year,
+                  monthInfo.month,
+                  dayNum,
+                  0,
+                  0
+                );
+                setSelectedDate(newDate);
+              }}
+              className={`aspect-square flex flex-col items-start justify-start rounded-lg border border-gray-200 p-1 cursor-pointer ${
+                monthInfo.month === currentMonth && i === currentDay - 1
+                  ? "bg-gray-300 hover:bg-gray-400"
+                  : "bg-white hover:bg-gray-100"
+              }`}
+            >
+              <div className="text-sm font-semibold mb-1">{dayNum}</div>
+              {/* Show up to 3 event snippets */}
+              {dayEvents.slice(0, 3).map((event) => (
+                <div
+                  key={event.id}
+                  className="w-full text-xs truncate bg-blue-100 text-blue-700 rounded px-1 mb-0.5"
+                  title={event.title}
+                >
+                  {event.title}
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
     </>
   );
