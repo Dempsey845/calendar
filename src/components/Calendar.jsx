@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default function Calendar() {
+export default function Calendar({ setSelectedDate }) {
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const [date, setDate] = useState(new Date());
   const [monthInfo, setMonthInfo] = useState({
@@ -22,7 +22,7 @@ export default function Calendar() {
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDay = new Date(year, month, 1);
-    const firstWeekdayIndex = firstDay.getDay(); // 0=Sun, 1=Mon, ...
+    const firstWeekdayIndex = firstDay.getDay();
 
     setMonthInfo({ day, year, month, daysInMonth, firstWeekdayIndex });
   }, [date]);
@@ -69,6 +69,17 @@ export default function Calendar() {
         {Array.from({ length: monthInfo.daysInMonth }).map((_, i) => (
           <div
             key={i}
+            onClick={() => {
+              const newDate = new Date(
+                monthInfo.year,
+                monthInfo.month,
+                i + 1,
+                0,
+                0
+              );
+              setSelectedDate(newDate);
+              console.log(newDate);
+            }}
             className={`aspect-square flex items-center justify-center rounded-lg border border-gray-200 ${
               monthInfo.month == currentMonth && i == currentDay - 1
                 ? "bg-gray-300"
