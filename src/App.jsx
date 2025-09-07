@@ -1,69 +1,41 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Calendar from "./components/Calendar";
 import Day from "./components/Day";
-
-const sepData = [
-  {
-    date: "2025-09-01",
-    events: [
-      {
-        id: 1,
-        title: "Morning Jog",
-        description: "5km run",
-        location: "Park",
-        startHour: 7, // 7:00
-        endHour: 8, // 8:00
-      },
-    ],
-  },
-  {
-    date: "2025-09-03",
-    events: [
-      {
-        id: 2,
-        title: "Team Meeting",
-        description: "Discuss Q4 roadmap",
-        location: "Zoom",
-        startHour: 12,
-        endHour: 13,
-      },
-      {
-        id: 3,
-        title: "Gym",
-        description: "Leg day workout",
-        location: "Local gym",
-        startHour: 18,
-        endHour: 19,
-      },
-    ],
-  },
-  {
-    date: "2025-09-05",
-    events: [
-      {
-        id: 4,
-        title: "Doctor Appointment",
-        description: "Annual checkup",
-        location: "Clinic",
-        startHour: 10,
-        endHour: 11,
-      },
-    ],
-  },
-];
+import {
+  fetchDays,
+  addEventToDay,
+  updateEventInDay,
+  deleteEventFromDay,
+} from "./firestoreHelpers";
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [data, setData] = useState(sepData);
+  const [data, setData] = useState([]); // start empty, load from Firestore
 
   const selectedMonth = selectedDate.getMonth();
   const selectedYear = selectedDate.getFullYear();
+
+  // filter days by current month/year
   const monthData = data.filter((d) => {
     const dObj = new Date(d.date);
     return (
       dObj.getMonth() === selectedMonth && dObj.getFullYear() === selectedYear
     );
   });
+
+  // fetch days when month/year changes
+  useEffect(() => {
+    async function loadDays() {
+      try {
+        const days = await fetchDays();
+        console.log("Fetched days:", days);
+        setData(days);
+      } catch (err) {
+        console.error("Error fetching days:", err);
+      }
+    }
+    loadDays();
+  }, [selectedYear, selectedMonth]);
 
   const pad = (n) => String(n).padStart(2, "0");
   const selectedDateString = `${selectedYear}-${pad(selectedMonth + 1)}-${pad(
@@ -75,50 +47,69 @@ function App() {
     events: [],
   };
 
-  // Add event
-  const addEvent = (newEvent) => {
-    setData((prevData) => {
-      const dataCopy = [...prevData];
-      const dayIndex = dataCopy.findIndex((d) => d.date === selectedDateString);
+  // Add event (sync with Firestore)
+  const addEvent = async (newEvent) => {
+    try {
+      const eventWithId = await addEventToDay(selectedDateString, newEvent);
+      setData((prevData) => {
+        const dataCopy = [...prevData];
+        const dayIndex = dataCopy.findIndex(
+          (d) => d.date === selectedDateString
+        );
 
-      const eventWithId = { id: Date.now(), ...newEvent };
+        if (dayIndex >= 0) {
+          dataCopy[dayIndex].events.push(eventWithId);
+        } else {
+          dataCopy.push({ date: selectedDateString, events: [eventWithId] });
+        }
 
-      if (dayIndex >= 0) {
-        dataCopy[dayIndex].events.push(eventWithId);
-      } else {
-        dataCopy.push({ date: selectedDateString, events: [eventWithId] });
-      }
-
-      return dataCopy;
-    });
+        return dataCopy;
+      });
+    } catch (err) {
+      console.error("Error adding event:", err);
+    }
   };
 
-  // Update event
-  const updateEvent = (updatedEvent) => {
-    setData((prevData) => {
-      const dataCopy = [...prevData];
-      const dayIndex = dataCopy.findIndex((d) => d.date === selectedDateString);
-      if (dayIndex >= 0) {
-        dataCopy[dayIndex].events = dataCopy[dayIndex].events.map((e) =>
-          e.id === updatedEvent.id ? updatedEvent : e
+  // Update event (sync with Firestore)
+  const updateEvent = async (updatedEvent) => {
+    try {
+      await updateEventInDay(selectedDateString, updatedEvent);
+      setData((prevData) => {
+        const dataCopy = [...prevData];
+        const dayIndex = dataCopy.findIndex(
+          (d) => d.date === selectedDateString
         );
-      }
-      return dataCopy;
-    });
+        if (dayIndex >= 0) {
+          dataCopy[dayIndex].events = dataCopy[dayIndex].events.map((e) =>
+            e.id === updatedEvent.id ? updatedEvent : e
+          );
+        }
+        return dataCopy;
+      });
+    } catch (err) {
+      console.error("Error updating event:", err);
+    }
   };
 
-  // Delete event
-  const deleteEvent = (eventId) => {
-    setData((prevData) => {
-      const dataCopy = [...prevData];
-      const dayIndex = dataCopy.findIndex((d) => d.date === selectedDateString);
-      if (dayIndex >= 0) {
-        dataCopy[dayIndex].events = dataCopy[dayIndex].events.filter(
-          (e) => e.id !== eventId
+  // Delete event (sync with Firestore)
+  const deleteEvent = async (eventId) => {
+    try {
+      await deleteEventFromDay(selectedDateString, eventId);
+      setData((prevData) => {
+        const dataCopy = [...prevData];
+        const dayIndex = dataCopy.findIndex(
+          (d) => d.date === selectedDateString
         );
-      }
-      return dataCopy;
-    });
+        if (dayIndex >= 0) {
+          dataCopy[dayIndex].events = dataCopy[dayIndex].events.filter(
+            (e) => e.id !== eventId
+          );
+        }
+        return dataCopy;
+      });
+    } catch (err) {
+      console.error("Error deleting event:", err);
+    }
   };
 
   return (
