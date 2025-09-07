@@ -79,7 +79,7 @@ export async function removeDay(date) {
    Event-level helpers
 --------------------------- */
 
-// Add a single event to a given date
+// Add a single event to a given date (creates document if missing)
 export async function addEventToDay(date, event) {
   const ref = doc(db, "days", date);
   const snap = await getDoc(ref);
@@ -92,10 +92,16 @@ export async function addEventToDay(date, event) {
   const newEvent = { id: Date.now(), ...event };
   events.push(newEvent);
 
-  await updateDoc(ref, {
-    events,
-    updatedAt: serverTimestamp(),
-  });
+  await setDoc(
+    ref,
+    {
+      date,
+      events,
+      createdAt: snap.exists() ? snap.data().createdAt : serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true } // creates the doc if missing
+  );
 
   return newEvent;
 }
@@ -112,10 +118,13 @@ export async function updateEventInDay(date, updatedEvent) {
     e.id === updatedEvent.id ? updatedEvent : e
   );
 
-  await updateDoc(ref, {
-    events: newEvents,
-    updatedAt: serverTimestamp(),
-  });
+  await setDoc(
+    ref,
+    { events: newEvents, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+
+  return updatedEvent;
 }
 
 // Delete a single event inside a given date
@@ -128,8 +137,9 @@ export async function deleteEventFromDay(date, eventId) {
   const events = snap.data().events || [];
   const newEvents = events.filter((e) => e.id !== eventId);
 
-  await updateDoc(ref, {
-    events: newEvents,
-    updatedAt: serverTimestamp(),
-  });
+  await setDoc(
+    ref,
+    { events: newEvents, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
 }

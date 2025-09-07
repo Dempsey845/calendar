@@ -7,6 +7,7 @@ import {
   updateEventInDay,
   deleteEventFromDay,
 } from "./firestoreHelpers";
+import { signOutOfGoogle } from "./auth";
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -122,6 +123,12 @@ function App() {
         updateEvent={updateEvent}
         deleteEvent={deleteEvent}
       />
+      <button
+        onClick={signOutOfGoogle}
+        className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors duration-200"
+      >
+        Sign Out
+      </button>
     </div>
   );
 }
