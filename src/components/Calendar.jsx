@@ -52,7 +52,7 @@ export default function Calendar({ selectedDate, setSelectedDate, monthData }) {
           Next
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-2 p-4">
+      <div className="grid grid-cols-7 gap-2 p-4 auto-rows-min grid-flow-row-dense">
         {weekdays.map((day) => (
           <div key={day} className="text-center font-semibold text-gray-600">
             {day}
@@ -61,7 +61,7 @@ export default function Calendar({ selectedDate, setSelectedDate, monthData }) {
 
         {Array.from({ length: monthInfo.firstWeekdayIndex }).map((_, i) => (
           <div
-            className="aspect-square flex items-center justify-center rounded-lg border border-gray-200 bg-gray-600"
+            className="flex items-center justify-center rounded-lg border border-gray-200 bg-gray-600"
             key={`shift${i}`}
           ></div>
         ))}
@@ -72,11 +72,9 @@ export default function Calendar({ selectedDate, setSelectedDate, monthData }) {
             monthInfo.month + 1
           ).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
 
-          // Find events for this day from monthData
           const dayEvents =
             monthData.find((d) => d.date === dayString)?.events || [];
 
-          // Check if this day is the selected date
           const isSelectedDay =
             selectedDate.getFullYear() === monthInfo.year &&
             selectedDate.getMonth() === monthInfo.month &&
@@ -85,17 +83,12 @@ export default function Calendar({ selectedDate, setSelectedDate, monthData }) {
           return (
             <div
               key={i}
-              onClick={() => {
-                const newDate = new Date(
-                  monthInfo.year,
-                  monthInfo.month,
-                  dayNum,
-                  0,
-                  0
-                );
-                setSelectedDate(newDate);
-              }}
-              className={`aspect-square flex flex-col items-start justify-start rounded-lg border border-gray-200 p-1 cursor-pointer ${
+              onClick={() =>
+                setSelectedDate(
+                  new Date(monthInfo.year, monthInfo.month, dayNum)
+                )
+              }
+              className={`flex flex-col items-start justify-start rounded-lg border border-gray-200 p-1 cursor-pointer transition-colors ${
                 isSelectedDay
                   ? "bg-blue-100 hover:bg-blue-200"
                   : monthInfo.month === currentMonth && i === currentDay - 1
@@ -104,7 +97,7 @@ export default function Calendar({ selectedDate, setSelectedDate, monthData }) {
               }`}
             >
               <div className="text-sm font-semibold mb-1">{dayNum}</div>
-              {dayEvents.slice(0, 3).map((event) => (
+              {dayEvents.map((event) => (
                 <div
                   key={event.id}
                   className="w-full text-xs truncate bg-blue-100 text-blue-700 rounded px-1 mb-0.5"
