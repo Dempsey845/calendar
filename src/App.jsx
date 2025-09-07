@@ -115,7 +115,11 @@ function App() {
 
   return (
     <div className="lg:mx-32">
-      <Calendar setSelectedDate={setSelectedDate} monthData={monthData} />
+      <Calendar
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        monthData={monthData}
+      />
       <Day
         date={selectedDate}
         dayData={dayData}

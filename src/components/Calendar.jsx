@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default function Calendar({ setSelectedDate, monthData }) {
+export default function Calendar({ selectedDate, setSelectedDate, monthData }) {
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const [date, setDate] = useState(new Date());
   const [monthInfo, setMonthInfo] = useState({
@@ -76,6 +76,12 @@ export default function Calendar({ setSelectedDate, monthData }) {
           const dayEvents =
             monthData.find((d) => d.date === dayString)?.events || [];
 
+          // Check if this day is the selected date
+          const isSelectedDay =
+            selectedDate.getFullYear() === monthInfo.year &&
+            selectedDate.getMonth() === monthInfo.month &&
+            selectedDate.getDate() === dayNum;
+
           return (
             <div
               key={i}
@@ -90,13 +96,14 @@ export default function Calendar({ setSelectedDate, monthData }) {
                 setSelectedDate(newDate);
               }}
               className={`aspect-square flex flex-col items-start justify-start rounded-lg border border-gray-200 p-1 cursor-pointer ${
-                monthInfo.month === currentMonth && i === currentDay - 1
+                isSelectedDay
+                  ? "bg-blue-100 hover:bg-blue-200"
+                  : monthInfo.month === currentMonth && i === currentDay - 1
                   ? "bg-gray-300 hover:bg-gray-400"
                   : "bg-white hover:bg-gray-100"
               }`}
             >
               <div className="text-sm font-semibold mb-1">{dayNum}</div>
-              {/* Show up to 3 event snippets */}
               {dayEvents.slice(0, 3).map((event) => (
                 <div
                   key={event.id}

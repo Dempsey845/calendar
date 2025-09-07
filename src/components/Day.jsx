@@ -28,9 +28,11 @@ export default function Day({
   const dayOfMonth = date.getDate();
   const weekdayIndex = date.getDay();
   const dayString = `${weekdays[weekdayIndex]}, ${months[month]} ${dayOfMonth}, ${year}`;
-  const hours = Array.from({ length: 10 }, (_, i) => i + 8);
 
-  const [selectedHours, setSelectedHours] = useState([]);
+  // 8:00 → 17:30 in 30-min intervals
+  const slots = Array.from({ length: 20 }, (_, i) => 8 + i * 0.5);
+
+  const [selectedSlots, setSelectedSlots] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -40,20 +42,23 @@ export default function Day({
     location: "",
   });
 
+  const [collapsed, setCollapsed] = useState(false);
+
+  const formatHour = (hour) =>
+    `${Math.floor(hour)}:${hour % 1 === 0 ? "00" : "30"}`;
+
   const startDrag = (hour) => {
     setIsDragging(true);
-    setSelectedHours([hour]);
+    setSelectedSlots([hour]);
   };
-
   const continueDrag = (hour) => {
     if (!isDragging) return;
-    const start = Math.min(selectedHours[0], hour);
-    const end = Math.max(selectedHours[0], hour);
+    const start = Math.min(selectedSlots[0], hour);
+    const end = Math.max(selectedSlots[0], hour);
     const range = [];
-    for (let h = start; h <= end; h++) range.push(h);
-    setSelectedHours(range);
+    for (let h = start; h <= end; h += 0.5) range.push(h);
+    setSelectedSlots(range);
   };
-
   const endDrag = () => setIsDragging(false);
 
   const openFormForAdd = () => {
@@ -61,7 +66,6 @@ export default function Day({
     setFormData({ title: "", description: "", location: "" });
     setShowForm(true);
   };
-
   const openFormForEdit = (event) => {
     setSelectedEvent(event);
     setFormData({
@@ -69,121 +73,99 @@ export default function Day({
       description: event.description,
       location: event.location,
     });
-    setSelectedHours(
-      Array.from(
-        { length: event.endHour - event.startHour + 1 },
-        (_, i) => event.startHour + i
-      )
-    );
+    const range = [];
+    for (let h = event.startHour; h < event.endHour; h += 0.5) range.push(h);
+    setSelectedSlots(range);
     setShowForm(true);
   };
 
   const handleSave = () => {
-    if (!formData.title || selectedHours.length === 0) return;
+    if (!formData.title || selectedSlots.length === 0) return;
+    const startHour = Math.min(...selectedSlots);
+    const endHour = Math.max(...selectedSlots) + 0.5; // include last half-hour
 
-    const startHour = Math.min(...selectedHours);
-    const endHour = Math.max(...selectedHours);
-
-    if (selectedEvent) {
-      // Update existing event
-      updateEvent({
-        ...selectedEvent,
-        ...formData,
-        startHour,
-        endHour,
-      });
-    } else {
-      // Add new event
-      addEvent({
-        ...formData,
-        startHour,
-        endHour,
-      });
-    }
+    if (selectedEvent)
+      updateEvent({ ...selectedEvent, ...formData, startHour, endHour });
+    else addEvent({ ...formData, startHour, endHour });
 
     setShowForm(false);
-    setSelectedHours([]);
+    setSelectedSlots([]);
     setFormData({ title: "", description: "", location: "" });
     setSelectedEvent(null);
   };
 
   const handleDelete = () => {
-    if (selectedEvent) {
-      deleteEvent(selectedEvent.id);
-    }
+    if (selectedEvent) deleteEvent(selectedEvent.id);
     setShowForm(false);
-    setSelectedHours([]);
+    setSelectedSlots([]);
     setFormData({ title: "", description: "", location: "" });
     setSelectedEvent(null);
   };
 
   return (
     <div
-      className="p-4 border rounded-lg shadow-sm select-none"
+      className="p-4  rounded-lg shadow-sm select-none max-w-full mx-auto"
       onMouseUp={endDrag}
       onMouseLeave={endDrag}
     >
-      <h1 className="font-bold text-lg mb-4">{dayString}</h1>
+      <h1 className="font-bold text-xl sm:text-lg mb-4 text-center sm:text-left">
+        {dayString}
+      </h1>
 
-      <button
-        onClick={openFormForAdd}
-        disabled={selectedHours.length === 0}
-        className="mb-4 px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
-      >
-        Add Event
-      </button>
+      {/* Action buttons */}
+      <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between mb-4 gap-2">
+        <button
+          onClick={openFormForAdd}
+          disabled={selectedSlots.length === 0}
+          className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded shadow hover:bg-green-600 disabled:opacity-50 transition-colors"
+        >
+          Add Event
+        </button>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="w-full sm:w-auto px-4 py-2 bg-gray-300 text-black rounded shadow hover:bg-gray-400 transition-colors"
+        >
+          {collapsed ? "Show All Slots" : "Collapse Empty Slots"}
+        </button>
+      </div>
 
+      {/* Event Form */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-lg relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-2">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md shadow-lg relative">
             <h2 className="text-lg font-bold mb-4">
               {selectedEvent ? "Edit Event" : "Add Event"}
             </h2>
-            <input
-              type="text"
-              placeholder="Title"
-              className="border p-2 mb-3 w-full rounded"
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-            />
-            <input
-              type="text"
-              placeholder="Description"
-              className="border p-2 mb-3 w-full rounded"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-            />
-            <input
-              type="text"
-              placeholder="Location"
-              className="border p-2 mb-3 w-full rounded"
-              value={formData.location}
-              onChange={(e) =>
-                setFormData({ ...formData, location: e.target.value })
-              }
-            />
-            <div className="flex justify-end space-x-2 mt-4">
+            {["title", "description", "location"].map((field) => (
+              <input
+                key={field}
+                type="text"
+                placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                className="border p-2 mb-3 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                value={formData[field]}
+                onChange={(e) =>
+                  setFormData({ ...formData, [field]: e.target.value })
+                }
+              />
+            ))}
+            <div className="flex flex-wrap justify-end gap-2 mt-4">
               <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-blue-500 text-white rounded"
+                className="px-4 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition-colors"
               >
                 Save
               </button>
               {selectedEvent && (
                 <button
                   onClick={handleDelete}
-                  className="px-4 py-2 bg-red-500 text-white rounded"
+                  className="px-4 py-2 bg-red-500 text-white rounded shadow hover:bg-red-600 transition-colors"
                 >
                   Delete
                 </button>
               )}
               <button
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-gray-300 text-black rounded"
+                className="px-4 py-2 bg-gray-300 text-black rounded shadow hover:bg-gray-400 transition-colors"
               >
                 Cancel
               </button>
@@ -198,49 +180,68 @@ export default function Day({
         </div>
       )}
 
-      <div className="flex flex-col space-y-1">
-        {hours.map((hour) => {
-          const eventsThisHour = [
-            ...new Map(
-              dayData.events
-                .filter((e) => hour >= e.startHour && hour <= e.endHour)
-                .map((e) => [e.id, e])
-            ).values(),
-          ];
+      {/* Time slots */}
+      <div className="flex flex-col space-y-1 max-h-[70vh] overflow-y-auto">
+        {slots
+          .filter((hour) => {
+            if (!collapsed) return true;
+            const eventsThisHour = dayData.events.filter(
+              (e) => hour >= e.startHour && hour < e.endHour
+            );
+            // keep slot if it has >1 event or is the start hour of an event
+            return (
+              eventsThisHour.length > 1 ||
+              eventsThisHour.some((e) => e.startHour === hour)
+            );
+          })
+          .map((hour) => {
+            const eventsThisHour = [
+              ...new Map(
+                dayData.events
+                  .filter((e) => hour >= e.startHour && hour < e.endHour)
+                  .map((e) => [e.id, e])
+              ).values(),
+            ];
+            const isSelected = selectedSlots.includes(hour);
 
-          const isSelected = selectedHours.includes(hour);
-
-          return (
-            <div
-              key={hour}
-              onMouseDown={() => startDrag(hour)}
-              onMouseEnter={() => continueDrag(hour)}
-              className={`flex border rounded p-2 h-16 items-start cursor-pointer ${
-                isSelected
-                  ? "bg-blue-200 border-blue-400"
-                  : "bg-white hover:bg-gray-100"
-              }`}
-            >
-              <div className="w-16 text-gray-500 font-semibold">{`${hour}:00`}</div>
-
-              <div className="flex-1 flex flex-col space-y-1">
-                {eventsThisHour.length > 0 ? (
-                  eventsThisHour.map((event) => (
-                    <div
-                      key={event.id}
-                      className="bg-blue-100 text-blue-700 rounded px-2 py-1 text-sm cursor-pointer"
-                      onClick={() => openFormForEdit(event)}
-                    >
-                      {event.title} ({event.startHour}:00 - {event.endHour}:00)
+            return (
+              <div
+                key={hour}
+                onMouseDown={() => startDrag(hour)}
+                onMouseEnter={() => continueDrag(hour)}
+                className={`flex border rounded p-2 sm:p-3 h-16 sm:h-20 items-start cursor-pointer transition-colors ${
+                  isSelected
+                    ? "bg-blue-200 border-blue-400"
+                    : "bg-white hover:bg-gray-100"
+                }`}
+              >
+                <div className="w-16 text-gray-500 font-semibold text-sm sm:text-base">
+                  {formatHour(hour)}
+                </div>
+                <div className="flex-1 flex flex-col space-y-1">
+                  {eventsThisHour.length > 0 ? (
+                    eventsThisHour.map((event) => (
+                      <div
+                        key={event.id}
+                        className="bg-blue-100 text-blue-700 rounded px-2 py-1 text-xs sm:text-sm cursor-pointer truncate"
+                        onClick={() => openFormForEdit(event)}
+                        title={`${event.title} (${formatHour(
+                          event.startHour
+                        )} - ${formatHour(event.endHour)})`}
+                      >
+                        {event.title} ({formatHour(event.startHour)} -{" "}
+                        {formatHour(event.endHour)})
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-gray-300 text-xs sm:text-sm italic">
+                      No events
                     </div>
-                  ))
-                ) : (
-                  <div className="text-gray-300 text-sm italic">No events</div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
   );
