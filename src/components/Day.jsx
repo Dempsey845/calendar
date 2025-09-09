@@ -44,6 +44,14 @@ export default function Day({
 
   const [collapsed, setCollapsed] = useState(false);
 
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+
+  const toggleSlotSelection = (hour) => {
+    setSelectedSlots((prev) =>
+      prev.includes(hour) ? prev.filter((h) => h !== hour) : [...prev, hour]
+    );
+  };
+
   const formatHour = (hour) =>
     `${Math.floor(hour)}:${hour % 1 === 0 ? "00" : "30"}`;
 
@@ -127,6 +135,16 @@ export default function Day({
         >
           {collapsed ? "Show All Slots" : "Collapse Empty Slots"}
         </button>
+        <button
+          onClick={() => setMultiSelectMode(!multiSelectMode)}
+          className={`w-full sm:w-auto px-4 py-2 rounded shadow transition-colors ${
+            multiSelectMode
+              ? "bg-purple-500 text-white hover:bg-purple-600"
+              : "bg-gray-300 text-black hover:bg-gray-400"
+          }`}
+        >
+          {multiSelectMode ? "Multi-Select: ON" : "Multi-Select: OFF"}
+        </button>
       </div>
 
       {/* Event Form */}
@@ -202,15 +220,15 @@ export default function Day({
                   .map((e) => [e.id, e])
               ).values(),
             ];
-            const isSelected = selectedSlots.includes(hour);
 
             return (
               <div
                 key={hour}
-                onMouseDown={() => startDrag(hour)}
-                onMouseEnter={() => continueDrag(hour)}
+                onMouseDown={() => !multiSelectMode && startDrag(hour)}
+                onMouseEnter={() => !multiSelectMode && continueDrag(hour)}
+                onClick={() => multiSelectMode && toggleSlotSelection(hour)}
                 className={`flex border rounded p-2 sm:p-3 h-16 sm:h-20 items-start cursor-pointer transition-colors ${
-                  isSelected
+                  selectedSlots.includes(hour)
                     ? "bg-blue-200 border-blue-400"
                     : "bg-white hover:bg-gray-100"
                 }`}
