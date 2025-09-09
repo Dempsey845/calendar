@@ -90,7 +90,7 @@ export default function Day({
   const handleSave = () => {
     if (!formData.title || selectedSlots.length === 0) return;
     const startHour = Math.min(...selectedSlots);
-    const endHour = Math.max(...selectedSlots) + 0.5; // include last half-hour
+    const endHour = Math.max(...selectedSlots);
 
     if (selectedEvent)
       updateEvent({ ...selectedEvent, ...formData, startHour, endHour });
